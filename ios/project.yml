@@ -20,12 +20,12 @@ targets:
     info:
       path: OpenWhoop/Info.plist
       properties:
-        CFBundleDisplayName: OpenWhoop
+        CFBundleDisplayName: Ares
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSBluetoothAlwaysUsageDescription: >-
-          OpenWhoop connects to your WHOOP 4.0 over Bluetooth to read heart rate,
+          Ares connects to your WHOOP band over Bluetooth to read heart rate,
           R-R intervals, battery, and sensor data locally on your device.
         UIBackgroundModes:
           - bluetooth-central
