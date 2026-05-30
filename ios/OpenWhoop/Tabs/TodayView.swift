@@ -9,6 +9,10 @@ struct TodayView: View {
     @EnvironmentObject private var metrics: MetricsRepository
     @EnvironmentObject private var live: LiveViewModel
 
+    // Card order + visibility (persisted); the recovery hero ring is pinned separately.
+    @State private var layout = DashboardLayoutStore.load()
+    @State private var showCustomize = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -51,25 +55,16 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: WH.Spacing.lg) {
 
                 // Custom tight header (replaces the hidden system large-title nav bar)
-                ScreenHeader("Today")
+                // with a customize (reorder/show-hide) affordance.
+                headerRow
 
-                // Hero recovery ring (tappable → recovery history)
+                // Hero recovery ring (pinned; tappable → recovery history)
                 heroSection
 
-                // Strain card → strain history
-                NavigationLink(destination: MetricDetailView(kind: .strain)) {
-                    strainCard
+                // Customizable cards — order + visibility from DashboardLayout.
+                ForEach(layout.visibleOrdered) { card in
+                    cardView(card)
                 }
-                .buttonStyle(.plain)
-
-                // Sleep card → sleep duration history
-                NavigationLink(destination: MetricDetailView(kind: .sleepDuration)) {
-                    sleepCard
-                }
-                .buttonStyle(.plain)
-
-                // HRV + RHR cards (half width each)
-                hrvAndRhrRow
 
                 if let err = metrics.lastError {
                     errorBanner(err)
@@ -87,6 +82,74 @@ struct TodayView: View {
             .padding(WH.Spacing.md)
         }
         .background(WH.Color.background)
+        .sheet(isPresented: $showCustomize) {
+            DashboardCustomizeView(layout: $layout)
+        }
+    }
+
+    // MARK: - Header (title + customize)
+
+    private var headerRow: some View {
+        HStack(alignment: .firstTextBaseline) {
+            ScreenHeader("Today")
+            Spacer(minLength: 0)
+            Button { showCustomize = true } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(WH.Color.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Customize dashboard")
+        }
+    }
+
+    // MARK: - Card dispatch (driven by DashboardLayout)
+
+    @ViewBuilder
+    private func cardView(_ card: TodayCard) -> some View {
+        switch card {
+        case .strain:
+            NavigationLink(destination: MetricDetailView(kind: .strain)) { strainCard }
+                .buttonStyle(.plain)
+        case .sleep:
+            NavigationLink(destination: MetricDetailView(kind: .sleepDuration)) { sleepCard }
+                .buttonStyle(.plain)
+        case .hrv:
+            NavigationLink(destination: MetricDetailView(kind: .hrv)) {
+                hrvCard.frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+        case .rhr:
+            NavigationLink(destination: MetricDetailView(kind: .rhr)) {
+                rhrCard.frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+        case .spo2:
+            extraCard(title: "SpO₂",
+                      value: metrics.today?.spo2Pct.map { String(format: "%.0f", $0) } ?? "—",
+                      unit: metrics.today?.spo2Pct != nil ? "%" : nil,
+                      accent: WH.Color.recoveryGreen)
+        case .skinTemp:
+            extraCard(title: "Skin Temp Δ",
+                      value: metrics.today?.skinTempDevC.map { String(format: "%+.1f", $0) } ?? "—",
+                      unit: metrics.today?.skinTempDevC != nil ? "°C" : nil,
+                      accent: WH.Color.recoveryYellow)
+        case .respRate:
+            extraCard(title: "Respiratory Rate",
+                      value: metrics.today?.respRateBpm.map { String(format: "%.1f", $0) } ?? "—",
+                      unit: metrics.today?.respRateBpm != nil ? "rpm" : nil,
+                      accent: WH.Color.strainBlue)
+        case .exercise:
+            extraCard(title: "Workouts",
+                      value: metrics.today?.exerciseCount.map(String.init) ?? "—",
+                      unit: nil,
+                      accent: WH.Color.textPrimary)
+        }
+    }
+
+    /// A plain (non-navigating) metric card for the extra biometric signals.
+    private func extraCard(title: String, value: String, unit: String?, accent: Color) -> some View {
+        MetricCard(title: title, value: value, unit: unit, accentColor: accent)
     }
 
     // MARK: - Hero section (recovery ring → recovery history)
@@ -200,21 +263,7 @@ struct TodayView: View {
                     in: RoundedRectangle(cornerRadius: WH.Radius.card, style: .continuous))
     }
 
-    // MARK: - HRV + RHR row
-
-    private var hrvAndRhrRow: some View {
-        HStack(spacing: WH.Spacing.sm) {
-            NavigationLink(destination: MetricDetailView(kind: .hrv)) {
-                hrvCard.frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink(destination: MetricDetailView(kind: .rhr)) {
-                rhrCard.frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.plain)
-        }
-    }
+    // MARK: - HRV + RHR cards (rendered individually via cardView)
 
     private var hrvCard: some View {
         let hrv = metrics.today?.avgHrv ?? metrics.lastNight?.avgHrv
