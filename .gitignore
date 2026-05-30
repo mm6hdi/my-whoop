@@ -67,3 +67,9 @@ ios/build/
 
 # Mac-side device-soak captures (gitignored; not the committed hist_biometric.bin fixture)
 fixtures/soak_*.bin
+
+# Gen-5 (WHOOP 5.0) RE captures + control/phase driver files — personal, local only.
+# (The scripts in re/gen5/ ARE committed; their captured output is not.)
+re/gen5/gen5_*.jsonl
+re/gen5/gen5_control.txt
+re/gen5/gen5_phase.txt

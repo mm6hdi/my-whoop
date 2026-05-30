@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "_scaffold": "WHOOP 5.0 (Gen-5) protocol schema — SKELETON ONLY. The 5.0 BLE protocol is NOT yet decoded (see docs/2026-05-30-whoop-5.0-re-method.md and FINDINGS.md sections 6-7). This file intentionally contains no real layouts and is NOT loaded by any decoder yet. Populate enums/envelope/packets from your OWN gen5 captures (re/gen5/), then wire a loader as described in _wiring.",
+  "_wiring": "Today the Python loader (server/packages/whoop-protocol/whoop_protocol/schema.py) and the Swift loader (Packages/WhoopProtocol/Sources/WhoopProtocol/WhoopProtocol.swift) each load the single 4.0 protocol/whoop_protocol.json. To activate Gen-5: (1) populate this file from captures; (2) add a generation selector to those two loaders; (3) add device-model detection (advertised name / GATT signature) in ios/OpenWhoop/BLE/BLEManager.swift and the re/gen5 scripts, choosing UUIDs + schema per generation.",
+  "_status": {
+    "framing": "UNKNOWN. re/gen5/analyze_frames.py tests whether it is the 4.0 [0xAA][len u16 LE][crc8]... scheme (total = len + 4) or something new.",
+    "gatt_uuids": "UNKNOWN. Confirm with re/gen5/gen5_gatt_dump.py. The 4.0 used service 61080001-8d6d-82b8-614a-1c8cb0f8dcc6.",
+    "bonding": "UNKNOWN. The 4.0 bonds via one confirmed write to the command char; the 5.0 may differ.",
+    "commands": "UNKNOWN. tazjin/Gadgetbridge #5731 reports ~70 commands on the 5.0; code unpublished.",
+    "standard_hr": "LIKELY WORKS. Standard HR 0x2A37 is generation-independent; re/gen5/gen5_standard_ble.py is the early win (HR + R-R).",
+    "imu": "tazjin: '6 integers (X/Y/Z per sensor)' — possibly the same signed int16 layout as the 4.0; no scale factors published. Decode via a labeled controlled-motion capture (see the method doc)."
+  },
+  "enums": {
+    "PacketType": {},
+    "CommandNumber": {},
+    "EventNumber": {},
+    "MetadataType": {}
+  },
+  "envelope": [],
+  "packets": {}
+}
