@@ -184,6 +184,23 @@ def upsert_sleep_sessions(conn: psycopg.Connection, device_id: str, sessions) ->
                  s.get("resting_hr"), s.get("avg_hrv"), json.dumps(s.get("stages") or [])))
 
 
+def upsert_daily_insight(conn: psycopg.Connection, device_id: str, day,
+                         insight: dict, model: str | None = None) -> None:
+    """Upsert the cached Claude insight for (device_id, day). ``day`` is a
+    datetime.date; ``insight`` is the {summary, observations, recommendations} dict.
+    Idempotent — a refresh overwrites the row in place."""
+    conn.execute(
+        """INSERT INTO daily_insights (device_id, day, summary, body, model, computed_at)
+           VALUES (%s, %s, %s, %s, %s, now())
+           ON CONFLICT (device_id, day) DO UPDATE SET
+             summary     = EXCLUDED.summary,
+             body        = EXCLUDED.body,
+             model       = EXCLUDED.model,
+             computed_at = now()""",
+        (device_id, day, insight.get("summary"), json.dumps(insight), model),
+    )
+
+
 def upsert_profile(conn: psycopg.Connection, device_id: str,
                    height_cm: float | None, weight_kg: float | None,
                    age: int | None, sex: str | None) -> None:

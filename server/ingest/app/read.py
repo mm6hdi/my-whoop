@@ -276,6 +276,34 @@ def query_workouts(conn, device_id, start_date, end_date):
     return [dict(zip(_WORKOUT_COLS, r)) for r in rows]
 
 
+def query_daily_insight(conn, device_id: str, day) -> dict | None:
+    """Return the cached Claude insight for (device_id, day), or None if not yet
+    generated. ``day`` is a datetime.date (or YYYY-MM-DD string). The stored ``body``
+    JSONB is merged up into the response so callers get a flat
+    {device, date, summary, observations, recommendations, model, computed_at}."""
+    row = conn.execute(
+        "SELECT day, body, model, computed_at FROM daily_insights "
+        "WHERE device_id = %s AND day = %s",
+        (device_id, day),
+    ).fetchone()
+    if row is None:
+        return None
+    day_val, body, model, computed_at = row
+    out = {
+        "device": device_id,
+        "date": day_val.isoformat() if hasattr(day_val, "isoformat") else str(day_val),
+        "summary": None,
+        "observations": [],
+        "recommendations": [],
+        "model": model,
+        "computed_at": computed_at,
+    }
+    if isinstance(body, dict):
+        out.update({k: v for k, v in body.items()
+                    if k in ("summary", "observations", "recommendations")})
+    return out
+
+
 from whoop_protocol import parse_frame
 
 

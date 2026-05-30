@@ -195,3 +195,20 @@ ALTER TABLE daily_metrics ADD COLUMN IF NOT EXISTS sleep_end       TIMESTAMPTZ;
 ALTER TABLE daily_metrics ADD COLUMN IF NOT EXISTS spo2_pct        REAL;
 ALTER TABLE daily_metrics ADD COLUMN IF NOT EXISTS skin_temp_dev_c REAL;
 ALTER TABLE daily_metrics ADD COLUMN IF NOT EXISTS resp_rate_bpm   REAL;
+
+-- ── Claude-generated daily insights (cache) ──────────────────────────────────
+-- A natural-language read on the user's own metrics, produced on demand by the
+-- /v1/insights endpoint (Anthropic API) and cached here so repeat views are cheap
+-- and the app can read them offline. Low-volume (one row per device per day),
+-- keyed by (device_id, day) — a plain table, not a hypertable. `body` holds the
+-- structured {summary, observations[], recommendations[]} JSON; `model` records
+-- which Claude model produced it.
+CREATE TABLE IF NOT EXISTS daily_insights (
+    device_id   TEXT NOT NULL,
+    day         DATE NOT NULL,
+    summary     TEXT,
+    body        JSONB,          -- {"summary","observations":[...],"recommendations":[...]}
+    model       TEXT,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (device_id, day)
+);
