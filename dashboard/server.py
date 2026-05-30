@@ -191,9 +191,16 @@ async def index(request):
     return web.FileResponse(STATIC / "index.html")
 
 
+async def live(request):
+    """Real-time metric view (HR, live HRV, accel/gyro, PPG, battery, events).
+    Reuses the same /ws stream as the hex inspector at /."""
+    return web.FileResponse(STATIC / "live.html")
+
+
 def make_app():
     app = web.Application()
     app.router.add_get("/", index)
+    app.router.add_get("/live", live)
     app.router.add_get("/ws", ws_handler)
     app.router.add_static("/static", STATIC)
     return app

@@ -138,3 +138,38 @@ main{display:grid;grid-template-columns:1.55fr .95fr;gap:14px;padding:14px 22px}
 ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
 ::-webkit-scrollbar-track{background:transparent}
 @media(max-width:1000px){main{grid-template-columns:1fr}}
+
+/* ====================================================================== */
+/* LIVE VIEW (live.html / live.js) — metric tiles + motion/PPG charts     */
+/* ====================================================================== */
+main.live{display:flex;flex-direction:column;gap:14px;padding:14px 22px}
+.live .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.live .tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--line);border-radius:10px;padding:13px 15px;min-height:104px;overflow:hidden}
+.tile label{font-size:9px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+.tile .tval{font-size:20px;color:var(--ink);font-weight:500;margin-top:6px;line-height:1}
+.tile .tval.big{font-size:42px;color:var(--phos);text-shadow:0 0 16px var(--phos-dim);font-family:var(--disp)}
+.tile.hr .tval.big{color:var(--c-hr);text-shadow:0 0 16px #ff5a6e55}
+.tile.hrv .tval.big{color:var(--c-rr);text-shadow:0 0 16px #ff9f4355}
+.tile .unit{font-size:10px;color:var(--dim);letter-spacing:.1em;margin-left:4px}
+.tile .tval.good{color:var(--phos)} .tile .tval.warn{color:var(--amber)}
+.tile .spark{position:absolute;right:10px;bottom:10px;width:120px;height:30px}
+.batt.wide{width:100%;height:9px;margin-top:9px}
+
+.live .charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.live .charts .wide{grid-column:1/3}
+@media(max-width:900px){.live .charts{grid-template-columns:1fr}.live .charts .wide{grid-column:auto}}
+.chart canvas{display:block;width:100%;height:150px}
+.chart.wide canvas{height:170px}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)}
+.leg i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-left:8px}
+.leg i:first-child{margin-left:0}
+
+.live .side{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.live .side{grid-template-columns:1fr}}
+.events .log{max-height:30vh}
+.notlive .nl-body{padding:12px 16px;color:var(--dim);font-size:11.5px}
+.notlive .nl-body ul{margin:8px 0;padding-left:18px;columns:2;color:var(--ink)}
+.notlive .nl-body li{margin:2px 0}
+.notlive .dimnote{color:var(--faint);font-size:10.5px;margin-top:6px}
