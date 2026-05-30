@@ -271,4 +271,29 @@ final class MetricsRepository: ObservableObject {
         await ensureOpen()
         return await serverSync?.backfillWorkouts(from: from, to: to) ?? false
     }
+
+    // MARK: - Claude insights + chat
+
+    /// Best-effort daily Claude insight for ``day`` (YYYY-MM-DD UTC). Returns nil when the
+    /// server is unconfigured, offline, or has no Claude key — callers render a fallback.
+    func insight(forDay day: String, lookback: Int = 7) async -> Insight? {
+        await ensureOpen()
+        return await serverSync?.getInsight(date: day, lookback: lookback)
+    }
+
+    /// Send the full chat history to the server's Claude chat endpoint; returns the reply,
+    /// or nil when unconfigured/offline. ``messages`` is [{"role","content"}].
+    func chat(_ messages: [[String: String]], lookback: Int = 14) async -> String? {
+        await ensureOpen()
+        return await serverSync?.chat(messages: messages, lookback: lookback)
+    }
+
+    /// Today's date as YYYY-MM-DD (UTC) — the anchor for insight/chat context.
+    func todayString() -> String {
+        let fmt = DateFormatter()
+        fmt.calendar = Calendar(identifier: .gregorian)
+        fmt.timeZone = TimeZone(identifier: "UTC")
+        fmt.dateFormat = "yyyy-MM-dd"
+        return fmt.string(from: Date())
+    }
 }

@@ -23,6 +23,11 @@ struct RootTabView: View {
                     Label("Workouts", systemImage: "figure.run")
                 }
 
+            CoachView()
+                .tabItem {
+                    Label("Coach", systemImage: "bubble.left.and.bubble.right")
+                }
+
             NavigationStack {
                 LiveView()
             }
