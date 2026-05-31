@@ -544,6 +544,31 @@ final class ServerSync {
         return await post(path: "/v1/backfill-workouts", body: bodyData)
     }
 
+    // MARK: - Claude insights + chat
+
+    /// GET /v1/insights?device=&date=&lookback= → an Insight, or nil when unconfigured,
+    /// offline, on parse error, or when the server has no Claude key (503). Best-effort.
+    func getInsight(date: String, lookback: Int = 7) async -> Insight? {
+        let path = "/v1/insights?device=\(deviceId)&date=\(date)&lookback=\(lookback)"
+        guard let body = await get(path: path),
+              let obj = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any],
+              let summary = obj["summary"] as? String else { return nil }
+        let obs = (obj["observations"] as? [Any])?.compactMap { $0 as? String } ?? []
+        let recs = (obj["recommendations"] as? [Any])?.compactMap { $0 as? String } ?? []
+        return Insight(date: (obj["date"] as? String) ?? date,
+                       summary: summary, observations: obs, recommendations: recs)
+    }
+
+    /// POST /v1/chat with the full conversation history; returns the assistant reply text,
+    /// or nil when unconfigured / offline / non-2xx. ``messages`` is [{role, content}].
+    func chat(messages: [[String: String]], lookback: Int = 14) async -> String? {
+        let body: [String: Any] = ["device": deviceId, "messages": messages, "lookback": lookback]
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: body),
+              let data = await postForData(path: "/v1/chat", body: bodyData),
+              let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return nil }
+        return obj["reply"] as? String
+    }
+
     // MARK: - HTTP helpers
 
     /// Perform a GET with the Bearer header. Returns the body Data only on 2xx; nil otherwise.
@@ -581,6 +606,36 @@ final class ServerSync {
             return false
         }
     }
+
+    /// POST with Bearer auth + JSON body, returning the response body Data on 2xx (nil
+    /// otherwise). Used by endpoints whose reply we need (e.g. /v1/chat).
+    private func postForData(path: String, body: Data) async -> Data? {
+        guard let url = URL(string: path, relativeTo: config.baseURL)
+                     ?? URL(string: config.baseURL.absoluteString + path) else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200..<300).contains(http.statusCode) else { return nil }
+            return data
+        } catch {
+            return nil
+        }
+    }
+}
+
+// MARK: - Insight model
+
+/// A Claude-generated daily insight over the user's own metrics (from GET /v1/insights).
+struct Insight: Equatable {
+    let date: String
+    let summary: String
+    let observations: [String]
+    let recommendations: [String]
 }
 
 // MARK: - Workout model

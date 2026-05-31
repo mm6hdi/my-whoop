@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import db, ingest, read, store
+from . import db, ingest, insights, read, store
 from .analysis import daily
 from .config import load_config
 
@@ -345,6 +345,75 @@ def backfill_workouts(body: BackfillWorkouts):
                 results.append({"date": day.isoformat(), "status": "error", "detail": str(exc)})
             day += _dt.timedelta(days=1)
     return {"recomputed": len(results), "days": results}
+
+
+# ── Claude insights + chat ────────────────────────────────────────────────────
+# Read-only Claude layer over the computed metrics. Both endpoints return 503 when
+# ANTHROPIC_API_KEY is unset, so the server runs fine without it. Compute-on-demand —
+# deliberately NOT wired into the ingest hot path (avoids per-upload API cost).
+
+
+@app.get("/v1/insights", dependencies=[Depends(require_auth)])
+def get_insights(device: str,
+                 date: str,
+                 lookback: int = Query(7, ge=1, le=90),
+                 refresh: bool = False):
+    """Natural-language insight for a device/date over the trailing ``lookback`` days.
+    Cached in daily_insights; pass refresh=true to regenerate. 503 if Claude is unconfigured."""
+    if not cfg.anthropic_api_key:
+        raise HTTPException(status_code=503, detail="Claude not configured (set ANTHROPIC_API_KEY)")
+    day = _parse_date(date)
+    with psycopg.connect(cfg.db_dsn) as conn:
+        if not refresh:
+            cached = read.query_daily_insight(conn, device, day)
+            if cached is not None:
+                return cached
+        context = insights.build_context(conn, device, day, lookback_days=lookback)
+        result = insights.daily_insight(
+            context,
+            client=insights.make_client(cfg.anthropic_api_key),
+            model=cfg.anthropic_model,
+        )
+        store.ensure_device(conn, device)
+        store.upsert_daily_insight(conn, device, day, result, model=cfg.anthropic_model)
+        conn.commit()
+    return {"device": device, "date": date, "model": cfg.anthropic_model, **result}
+
+
+class ChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatBody(BaseModel):
+    device: str
+    messages: list[ChatMessage]
+    lookback: int = Field(default=14, ge=1, le=90)
+    date: str | None = None  # context anchor; defaults to today (UTC)
+
+
+@app.post("/v1/chat", dependencies=[Depends(require_auth)])
+def post_chat(body: ChatBody):
+    """Answer a question about the user's own metrics. Stateless — the client sends the
+    full ``messages`` history each turn. 503 if Claude is unconfigured."""
+    if not cfg.anthropic_api_key:
+        raise HTTPException(status_code=503, detail="Claude not configured (set ANTHROPIC_API_KEY)")
+    if not body.messages or body.messages[0].role != "user":
+        raise HTTPException(status_code=422, detail="messages must be non-empty and start with a user turn")
+    for m in body.messages:
+        if m.role not in ("user", "assistant"):
+            raise HTTPException(status_code=422, detail=f"invalid message role: {m.role!r}")
+    day = _parse_date(body.date) if body.date else _dt.datetime.now(_dt.timezone.utc).date()
+    # Build context inside a short-lived connection; don't hold the DB during the API call.
+    with psycopg.connect(cfg.db_dsn) as conn:
+        context = insights.build_context(conn, body.device, day, lookback_days=body.lookback)
+    reply = insights.chat(
+        [m.model_dump() for m in body.messages],
+        context,
+        client=insights.make_client(cfg.anthropic_api_key),
+        model=cfg.anthropic_model,
+    )
+    return {"reply": reply}
 
 
 @app.get("/v1/batches/{batch_id}/frames", dependencies=[Depends(require_auth)])

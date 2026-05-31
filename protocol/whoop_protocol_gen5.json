@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "_scaffold": "WHOOP 5.0 (Gen-5) protocol schema — SKELETON ONLY. The 5.0 BLE protocol is NOT yet decoded (see docs/2026-05-30-whoop-5.0-re-method.md and FINDINGS.md sections 6-7). This file intentionally contains no real layouts and is NOT loaded by any decoder yet. Populate enums/envelope/packets from your OWN gen5 captures (re/gen5/), then wire a loader as described in _wiring.",
+  "_wiring": "Today the Python loader (server/packages/whoop-protocol/whoop_protocol/schema.py) and the Swift loader (Packages/WhoopProtocol/Sources/WhoopProtocol/WhoopProtocol.swift) each load the single 4.0 protocol/whoop_protocol.json. To activate Gen-5: (1) populate this file from captures; (2) add a generation selector to those two loaders; (3) add device-model detection (advertised name / GATT signature) in ios/OpenWhoop/BLE/BLEManager.swift and the re/gen5 scripts, choosing UUIDs + schema per generation.",
+  "_status": {
+    "device_observed": "WHOOP MG (Model 'MG'), firmware 50.38.1.0, Manufacturer 'WHOOP Inc.' — gen-5-class.",
+    "framing": "UNKNOWN. re/gen5/analyze_frames.py tests whether it is the 4.0 [0xAA][len u16 LE][crc8]... scheme (total = len + 4) or something new.",
+    "gatt_uuids": "CONFIRMED (WHOOP MG): NEW custom service fd4b0001-cce1-4033-93ce-002d5875f58a (NOT the 4.0 6108...), but the SAME 5-channel layout — see the 'gatt' block.",
+    "bonding": "BLOCKED on WHOOP MG (fw 50.38.1.0): the fd4b custom channel requires encryption + authentication (CBATTError 15/5); the 4.0 just-works confirmed-write bond is REFUSED. It is app/account-paired — an access control. Out of scope (DISCLAIMER.md: no circumventing access controls). Use the OPEN standard Heart Rate profile instead — see dashboard/gen5_live.py.",
+    "commands": "UNKNOWN. tazjin/Gadgetbridge #5731 reports ~70 commands on the 5.0; code unpublished. Channel roles appear to mirror the 4.0.",
+    "standard_hr": "CONFIRMED (WHOOP MG, fw 50.38.1.0): standard Heart Rate 0x180D / 0x2A37 streams HR + R-R unbonded (advertised in the scan). The early win.",
+    "imu": "tazjin: '6 integers (X/Y/Z per sensor)' — possibly the same signed int16 layout as the 4.0; no scale factors published. Decode via a labeled controlled-motion capture (see the method doc)."
+  },
+  "gatt": {
+    "_note": "Observed on a WHOOP MG (fw 50.38.1.0) via re/gen5/gen5_gatt_dump.py. Service/characteristic UUIDs are protocol-level (shared across MG devices); the per-device BLE address is personal and lives only in the gitignored re/device_local.py. Custom-channel ROLES are inferred from the 1:1 parallel to the 4.0 layout (FINDINGS.md section 2) and are PENDING capture confirmation.",
+    "standard": {
+      "heart_rate": "service 0000180d / char 0x2A37 (notify) — HR + R-R, works unbonded",
+      "battery": "service 0000180f / char 0x2A19 (read,notify)",
+      "device_info": "service 0000180a — 0x2A29 manufacturer, 0x2A24 model, 0x2A25 serial, 0x2A26 firmware, 0x2A27"
+    },
+    "custom_service": "fd4b0001-cce1-4033-93ce-002d5875f58a",
+    "custom_chars": {
+      "fd4b0002": "write / write-without-response -> commands TO strap (CMD_TX). 4.0 analog: 61080002.",
+      "fd4b0003": "notify -> command responses (inferred). 4.0 analog: 61080003.",
+      "fd4b0004": "notify -> events (inferred). 4.0 analog: 61080004.",
+      "fd4b0005": "notify -> data: realtime / raw / historical (inferred). 4.0 analog: 61080005.",
+      "fd4b0007": "notify -> memfault / diagnostics (inferred). 4.0 analog: 61080007."
+    }
+  },
+  "enums": {
+    "PacketType": {},
+    "CommandNumber": {},
+    "EventNumber": {},
+    "MetadataType": {}
+  },
+  "envelope": [],
+  "packets": {}
+}

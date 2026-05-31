@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARES·LIVE — real-time metrics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="grain"></div>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◍</span>
+    <div>
+      <h1>ARES<span class="sep">·</span>LIVE</h1>
+      <p class="tag">every metric your band streams live</p>
+    </div>
+  </div>
+  <div class="readouts">
+    <div class="stat"><label>LINK</label><span id="st-conn" class="val"><i class="dot"></i> —</span></div>
+    <div class="stat"><label>DEVICE</label><span id="st-dev" class="val">—</span></div>
+    <div class="stat"><label>BOND</label><span id="st-bond" class="val">—</span></div>
+    <div class="stat"><label>STREAM</label><span id="st-rate" class="val">0 pkt/s</span></div>
+  </div>
+</header>
+
+<nav class="deck">
+  <button data-act="start_realtime" class="btn on">▶ realtime HR</button>
+  <button data-act="stop_realtime" class="btn">■ stop HR</button>
+  <button data-act="start_raw" class="btn on">▶ raw (IMU + PPG)</button>
+  <button data-act="stop_raw" class="btn">■ stop raw</button>
+  <button id="demo-btn" class="btn accent">◍ demo data</button>
+  <a class="btn" href="/" style="margin-left:auto;text-decoration:none">⤷ hex inspector</a>
+</nav>
+
+<main class="live">
+  <!-- scalar tiles -->
+  <section class="tiles">
+    <div class="tile hr">
+      <label>HEART RATE</label>
+      <div class="tval big" id="m-hr">—</div><span class="unit">bpm</span>
+      <canvas id="spark-hr" class="spark"></canvas>
+    </div>
+    <div class="tile hrv">
+      <label>HRV · live RMSSD</label>
+      <div class="tval big" id="m-hrv">—</div><span class="unit">ms</span>
+      <canvas id="spark-hrv" class="spark"></canvas>
+    </div>
+    <div class="tile">
+      <label>BATTERY</label>
+      <div class="tval big" id="m-batt">—</div>
+      <div class="batt wide"><i id="batt-fill"></i></div>
+      <span class="unit" id="m-charge"></span>
+    </div>
+    <div class="tile">
+      <label>WRIST / CONTACT</label>
+      <div class="tval" id="m-wrist">—</div>
+      <span class="unit">from strap events</span>
+    </div>
+  </section>
+
+  <!-- waveform / motion charts -->
+  <section class="charts">
+    <div class="chart panel">
+      <div class="panel-head"><h2>ACCELEROMETER</h2>
+        <span class="leg"><i style="background:var(--c-accel)"></i>x<i style="background:#7fe34a"></i>y<i style="background:#e6ff9c"></i>z · g</span></div>
+      <canvas id="chart-accel"></canvas>
+    </div>
+    <div class="chart panel">
+      <div class="panel-head"><h2>GYROSCOPE</h2>
+        <span class="leg"><i style="background:var(--c-gyro)"></i>x<i style="background:#9a6cff"></i>y<i style="background:#d9c2ff"></i>z · deg/s</span></div>
+      <canvas id="chart-gyro"></canvas>
+    </div>
+    <div class="chart panel wide">
+      <div class="panel-head"><h2>PPG · OPTICAL WAVEFORM</h2><span class="pkt-meta">raw photoplethysmogram</span></div>
+      <canvas id="chart-ppg"></canvas>
+    </div>
+  </section>
+
+  <section class="side">
+    <div class="panel events">
+      <div class="panel-head"><h2>STRAP EVENTS</h2></div>
+      <div id="evlog" class="log"></div>
+    </div>
+    <div class="panel notlive">
+      <div class="panel-head"><h2>NOT STREAMED LIVE</h2></div>
+      <div class="nl-body">
+        <p>Computed in WHOOP's cloud from the raw signals above — they don't appear on the live BLE wire:</p>
+        <ul>
+          <li>SpO₂ %</li><li>Skin temperature</li>
+          <li>Recovery score</li><li>Day strain</li><li>Sleep stages</li>
+        </ul>
+        <p class="dimnote">These show up in the daily/historical metrics and the Claude insights, not here.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/live.js"></script>
+</body>
+</html>

@@ -36,6 +36,10 @@ services:
       - WHOOP_API_KEY=${WHOOP_API_KEY}
       - WHOOP_DB_DSN=postgresql://${WHOOP_DB_USER:-whoop}:${WHOOP_DB_PASSWORD}@whoop-db:5432/${WHOOP_DB_NAME:-whoop}
       - WHOOP_RAW_ROOT=/data/raw
+      # Optional: Claude insights + chat. Empty -> /v1/insights and /v1/chat return 503
+      # (the rest of the server runs fine).
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-opus-4-8}
       - TZ=${TZ:-UTC}
     volumes:
       - ${DATA_ROOT}/whoop/raw:/data/raw

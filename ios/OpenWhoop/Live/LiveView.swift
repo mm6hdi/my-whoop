@@ -36,6 +36,12 @@ private struct LiveContentView: View {
 
     @State private var showingSettings = false
 
+    /// Rolling R-R buffer + live HRV (RMSSD), accumulated from the live stream. LiveState.rr
+    /// holds only the most-recent packet's intervals, so we keep a short window here to derive
+    /// an instantaneous HRV — the same headline metric the web /live view shows.
+    @State private var rrWindow: [Double] = []
+    @State private var liveHRV: Double?
+
     /// Research toggle, backed by the same UserDefaults key BLEManager.bootstrapStore() reads.
     /// Default false → decoded-only. bootstrapStore() reads this once when it builds the
     /// Collector/Backfiller (first Bluetooth poweredOn after launch, idempotent thereafter),
@@ -74,6 +80,7 @@ private struct LiveContentView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .onChange(of: state.rr) { rr in ingestRR(rr) }
         .sheet(isPresented: $showingSettings) {
             // iOS 16: sheets don't reliably inherit environment objects — pass explicitly.
             SettingsView()
@@ -269,8 +276,41 @@ private struct LiveContentView: View {
                             .foregroundStyle(WH.Color.textSecondary)
                     }
                 }
+
+                // Live HRV (RMSSD) derived from the rolling R-R window — the same
+                // instantaneous metric the web /live view shows.
+                VStack(alignment: .leading, spacing: WH.Spacing.xs) {
+                    Text("LIVE HRV · RMSSD")
+                        .font(WH.Font.cardTitle)
+                        .foregroundStyle(WH.Color.textSecondary)
+                        .tracking(1.2)
+                    HStack(alignment: .lastTextBaseline, spacing: WH.Spacing.xs) {
+                        Text(liveHRV.map { String(format: "%.0f", $0) } ?? "—")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundStyle(liveHRV != nil ? WH.Color.recoveryGreen : WH.Color.textSecondary)
+                            .monospacedDigit()
+                        Text("ms")
+                            .font(WH.Font.caption)
+                            .foregroundStyle(WH.Color.textSecondary)
+                    }
+                }
             }
         }
+    }
+
+    /// Accumulate the latest R-R intervals into a short rolling window and recompute RMSSD.
+    /// Generic over the integer element type so it matches whatever LiveState.rr exposes.
+    private func ingestRR<I: BinaryInteger>(_ rr: [I]) {
+        guard !rr.isEmpty else { return }
+        for v in rr where v > 250 && v < 2000 { rrWindow.append(Double(v)) }
+        if rrWindow.count > 60 { rrWindow.removeFirst(rrWindow.count - 60) }
+        guard rrWindow.count >= 5 else { liveHRV = nil; return }
+        var sumSq = 0.0
+        for i in 1 ..< rrWindow.count {
+            let d = rrWindow[i] - rrWindow[i - 1]
+            sumSq += d * d
+        }
+        liveHRV = (sumSq / Double(rrWindow.count - 1)).squareRoot()
     }
 
     // MARK: - 3. Controls
