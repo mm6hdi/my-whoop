@@ -6,7 +6,7 @@
     "device_observed": "WHOOP MG (Model 'MG'), firmware 50.38.1.0, Manufacturer 'WHOOP Inc.' — gen-5-class.",
     "framing": "UNKNOWN. re/gen5/analyze_frames.py tests whether it is the 4.0 [0xAA][len u16 LE][crc8]... scheme (total = len + 4) or something new.",
     "gatt_uuids": "CONFIRMED (WHOOP MG): NEW custom service fd4b0001-cce1-4033-93ce-002d5875f58a (NOT the 4.0 6108...), but the SAME 5-channel layout — see the 'gatt' block.",
-    "bonding": "PENDING. The 4.0 bonds via one confirmed write to the command char (61080002); testing the same on the MG command char fd4b0002.",
+    "bonding": "BLOCKED on WHOOP MG (fw 50.38.1.0): the fd4b custom channel requires encryption + authentication (CBATTError 15/5); the 4.0 just-works confirmed-write bond is REFUSED. It is app/account-paired — an access control. Out of scope (DISCLAIMER.md: no circumventing access controls). Use the OPEN standard Heart Rate profile instead — see dashboard/gen5_live.py.",
     "commands": "UNKNOWN. tazjin/Gadgetbridge #5731 reports ~70 commands on the 5.0; code unpublished. Channel roles appear to mirror the 4.0.",
     "standard_hr": "CONFIRMED (WHOOP MG, fw 50.38.1.0): standard Heart Rate 0x180D / 0x2A37 streams HR + R-R unbonded (advertised in the scan). The early win.",
     "imu": "tazjin: '6 integers (X/Y/Z per sensor)' — possibly the same signed int16 layout as the 4.0; no scale factors published. Decode via a labeled controlled-motion capture (see the method doc)."
